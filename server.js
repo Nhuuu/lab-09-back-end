@@ -41,14 +41,14 @@ const SQL_INSERTS = {
   weathers: `INSERT INTO weathers (
     forecast,
     time,
-    location_id,
+    location_id
   ) VALUES ($1, $2, $3) RETURNING *`,
   events: `INSERT INTO events (
     link,
     name,
     event_date,
     summary,
-    location_id,
+    location_id
   ) VALUES ($1, $2, $3, $4, $5) RETURNING *`
 }
 
@@ -58,23 +58,34 @@ function cacheHit(sqlResult){
   return sqlResult.rows[0];
 }
 
+
+
 function cacheMiss(url, ConstructedObj, search, tableName){
   console.log('getting new data from google');
   return superagent.get(url)
   .then(result => {
-    let searchObj;
-    let searchObjValues; 
+    let createObj;
+    let objValues; 
+    let eachObjValue;
     if(tableName === 'locations'){
-      searchObj = new ConstructedObj(search, result);
+      createObj = new ConstructedObj(search, result);
     } else if (tableName === 'weathers'){
-        searchObj = result.body.daily.data.map(day => new ConstructedObj(day))
-        searchObjValues = Object.values(searchObj).map(values => values) // push the location id to this array
-        // searchObjValues.push(search);
-        console.log('searchObjValues', searchObjValues)
-    } 
+
+      createObj = result.body.daily.data.map(day => new ConstructedObj(day, search))
+      objValues = Object.values(createObj).map(values => values)
+      Object.values(objValues).forEach(val => val)
+      console.log('objValues', objValues)
+
+    } else if (tableName === 'events'){
+      createObj = result.body.events.map(day => new ConstructedObj(day, search))
+      console.log('createObj', createObj)
+      objValues = Object.values(createObj).map(values => values) // array of all of the event objects
+      console.log('objValues', objValues)
+    }
+
     return client.query(
       SQL_INSERTS[tableName],
-      searchObjValues
+      objValues.forEach(val => val)
       )
       .then(sqlResult => {
         return sqlResult.rows[0];
@@ -138,36 +149,73 @@ function searchForWeather(request, response) {
 }
 
 //Constructor function to create weather objects
-function Weather(weatherData) {
+function Weather(weatherData, search) {
   let time = new Date(weatherData.time * 1000).toDateString();
   this.forecast = weatherData.summary;
   this.time = time;
+  this.location_id = search;
 }
 
 
 function searchForEvents(request, response) {
-  const location = request.query.data;
-  const url = `https://www.eventbriteapi.com/v3/events/search/?location.longitude=${location.longitude}&location.latitude=${location.latitude}&expand=venue&token=${process.env.EVENTBRITE_API_KEY}`;
-  superagent.get(url)
-    .then(result => {
-      const eventArr = result.body.events.map(eventData => {
-        return new Event(eventData);
-      })
-      response.send(eventArr);
-    })
-    .catch(e => {
-      console.error(e);
-      response.status(500).send('Status 500: I broke trying to get events.')
-    })
+  const locationName = request.query.data;
+  const url = `https://www.eventbriteapi.com/v3/events/search/?location.longitude=${locationName.longitude}&location.latitude=${locationName.latitude}&expand=venue&token=${process.env.EVENTBRITE_API_KEY}`;
+  checkDB('location_id', locationName.id, 'events', url, Event)
+  .then(eventData => {
+    response.send(eventData);
+  })
+  .catch(err => {
+    console.error('searchforevents', err); 
+    response.status(500).send('Status 500: So sorry i broke');
+  })
 }
 
 //Constructor function to create event objects
-function Event(eventData) {
+function Event(eventData, search) {
   this.link = eventData.url;
   this.name = eventData.name.text;
   this.event_date = new Date(eventData.start.utc).toDateString();
   this.summary = eventData.summary;
+  this.location_id = search;
 }
+
+
+// `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}`
+
+function searchForMovies(request, response) {
+  const locationName = request.query.data;
+  // const url = `https://www.eventbriteapi.com/v3/events/search/?location.longitude=${locationName.longitude}&location.latitude=${locationName.latitude}&expand=venue&token=${process.env.EVENTBRITE_API_KEY}`;
+  checkDB('location_id', locationName.id, 'movies', url, Movie)
+  .then(movieData => {
+    response.send(movieData);
+  })
+  .catch(err => {
+    console.error('searchformovies', err);
+    response.status(500).send('Status 500: So sorry i broke');
+  })
+}
+
+function Movie(movieData, search) {
+  this.title = movieData;
+  this.overview = movieData;
+  this.average_votes = movieData;
+  this.total_votes = movieData;
+  this.image_url = movieData;
+  this.popularity = movieData;
+  this.released_on = movieData;
+  this.location_id = search;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
