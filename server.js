@@ -58,27 +58,36 @@ function cacheHit(sqlResult){
   return sqlResult.rows[0];
 }
 
-function cacheMiss(url, locationName, tableName){
+function cacheMiss(url, ConstructedObj, search, tableName){
   console.log('getting new data from google');
   return superagent.get(url)
-    .then(result => {
-      let location = new Location(locationName, result);
-      return client.query(
-        SQL_INSERTS[tableName],
-        // [Object.values()]
-        [location.search_query, location.formatted_query, location.latitude, location.longitude]
-        )
+  .then(result => {
+    let searchObj;
+    let searchObjValues; 
+    if(tableName === 'locations'){
+      searchObj = new ConstructedObj(search, result);
+    } else if (tableName === 'weathers'){
+        searchObj = result.body.daily.data.map(day => new ConstructedObj(day))
+        searchObjValues = Object.values(searchObj).map(values => values) // push the location id to this array
+        // searchObjValues.push(search);
+        console.log('searchObjValues', searchObjValues)
+    } 
+    return client.query(
+      SQL_INSERTS[tableName],
+      searchObjValues
+      )
       .then(sqlResult => {
         return sqlResult.rows[0];
       })
     })
 }
 
-function checkDB(searchName, search, tableName, url){
+function checkDB(searchName, search, tableName, url, ConstructedObj){
   return client.query(`SELECT * FROM ${tableName} WHERE ${searchName}=$1`, [search])
     .then(sqlResult => {
+      console.log('tablename', tableName)
       if (sqlResult.rowCount === 0) {
-        return cacheMiss(url, search, tableName)
+        return cacheMiss(url, ConstructedObj, search, tableName)
       } else {
         return cacheHit(sqlResult)
       }
@@ -90,9 +99,10 @@ function searchToLatLong(request, response) {
   const locationName = request.query.data;
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODE_API_KEY}`;
 
-  checkDB('search_query', locationName, 'locations', url)
+  checkDB('search_query', locationName, 'locations', url, Location)
     .then(locationData => {
-      response.send(locationData)
+
+      response.send(locationData);
     })
     .catch(err => {
       console.error('searchtolatlong', err);
@@ -110,19 +120,21 @@ function Location(query, result) {
 
 //The searchForWeather function returns an array with the day and the forecast for the day
 function searchForWeather(request, response) {
-  const location = request.query.data;
-  const url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${location.latitude},${location.longitude}`;
-  superagent.get(url)
-    .then(result => {
-      const weatherArr = result.body.daily.data.map(day => {
-        return new Weather(day);
-      })
-      response.send(weatherArr);
-    })
-    .catch(e => {
-      console.error(e);
-      response.status(500).send('Status 500: I broke trying to get weather.')
-    })
+  const locationName = request.query.data;
+  const url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${locationName.latitude},${locationName.longitude}`;
+  
+  checkDB('location_id', locationName.id, 'weathers', url, Weather)
+  .then(weatherData => {
+    console.log('------------------------', locationName)
+    console.log('weatherData', weatherData);
+    // console.log('weatherData body', weatherData.daily.data)
+
+    response.send(weatherData);
+  })
+  .catch(err => {
+    console.error('searchforweather', err);
+    response.status(500).send('Status 500: So sorry i broke');
+  })
 }
 
 //Constructor function to create weather objects
