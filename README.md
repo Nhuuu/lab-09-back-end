@@ -80,8 +80,21 @@ Finish time: 12:50am
 
 Actual time needed to complete: 1 hour
 
+<!-- ------------- -->
+Number and name of feature: #1 Database
+
+Estimate of time needed to complete: 20 min
+
+Start time: 9:10
+
+Finish time: 9:26
+
+Actual time needed to complete: 16 min
+
 ## Credits and Collaborations
 Nicholas Paro - https://github.com/paronicholas
 Padmapriya Ganapathi - https://github.com/gpadmapriya
 Peter Lee - https://github.com/leepj85
+Chris Coulon, Matt Stuhring, Padma Ganapathi, Trevor Dobson & Marisha Hoza
+Brandon Hurrington & Joachen Busche
 
