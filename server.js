@@ -180,11 +180,9 @@ function Event(eventData, search) {
 }
 
 
-// `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}`
-
 function searchForMovies(request, response) {
   const locationName = request.query.data;
-  // const url = `https://www.eventbriteapi.com/v3/events/search/?location.longitude=${locationName.longitude}&location.latitude=${locationName.latitude}&expand=venue&token=${process.env.EVENTBRITE_API_KEY}`;
+  const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}`;
   checkDB('location_id', locationName.id, 'movies', url, Movie)
   .then(movieData => {
     response.send(movieData);
@@ -208,13 +206,28 @@ function Movie(movieData, search) {
 
 
 
+function searchForFood(request, response) {
+  const locationName = request.query.data;
+  // const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.YELP_API_KEY}`;
+  checkDB('location_id', locationName.id, 'food', url, Food)
+  .then(foodData => {
+    response.send(foodData);
+  })
+  .catch(err => {
+    console.error('searchforfood', err);
+    response.status(500).send('Status 500: So sorry i broke');
+  })
+}
 
-
-
-
-
-
-
+function Food(foodData, search) {
+  this.title = foodData;
+  this.name = foodData;
+  this.image_url = foodData;
+  this.price = foodData;
+  this.rating = foodData;
+  this.url = foodData;
+  this.location_id = search;
+}
 
 
 // Make sure the server is listening for requests
