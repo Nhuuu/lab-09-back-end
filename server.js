@@ -27,6 +27,10 @@ app.get('/weather', searchForWeather);
 
 app.get('/events', searchForEvents);
 
+// app.get('/movies', searchForMovies);
+
+// app.get('/yelp', searchForRestaurants);
+
 app.use('*', (request, response) => {
   response.status(404).send('you got to the wrong place');
 })
@@ -59,44 +63,40 @@ function cacheHit(sqlResult){
 }
 
 
-
 function cacheMiss(url, ConstructedObj, search, tableName){
   console.log('getting new data from google');
   return superagent.get(url)
   .then(result => {
-    let createObj;
-    let objValues; 
-    let eachObjValue;
+    let objects;
+    let values = [];
+    
     if(tableName === 'locations'){
-      createObj = new ConstructedObj(search, result);
-    } else if (tableName === 'weathers'){
-
-      createObj = result.body.daily.data.map(day => new ConstructedObj(day, search))
-      objValues = Object.values(createObj).map(values => values)
-      Object.values(objValues).forEach(val => val)
-      console.log('objValues', objValues)
-
-    } else if (tableName === 'events'){
-      createObj = result.body.events.map(day => new ConstructedObj(day, search))
-      console.log('createObj', createObj)
-      objValues = Object.values(createObj).map(values => values) // array of all of the event objects
-      console.log('objValues', objValues)
+      objects = new ConstructedObj(search, result);
+      values.push(Object.values(objects))
+    } 
+    if (tableName === 'weathers'){
+      objects = result.body.daily.data.map(day => new ConstructedObj(day, search))
+      objects.forEach(obj => values.push(Object.values(obj)))
     }
-
-    return client.query(
-      SQL_INSERTS[tableName],
-      objValues.forEach(val => val)
-      )
-      .then(sqlResult => {
-        return sqlResult.rows[0];
+    // if (tableName === 'events'){
+    //   objects = result.body.events.map(event => new ConstructedObj(event, search))
+    //   objects.forEach(obj => values.push(Object.values(obj)))
+    // }
+    return values.forEach(val => {
+      return client.query(SQL_INSERTS[tableName], val)
+        .then(sqlResult => {
+          console.log('sqlResult.rows----------------------', sqlResult.rows)
+          return sqlResult.rows;
+        })
       })
-    })
+  })
 }
 
 function checkDB(searchName, search, tableName, url, ConstructedObj){
   return client.query(`SELECT * FROM ${tableName} WHERE ${searchName}=$1`, [search])
     .then(sqlResult => {
       console.log('tablename', tableName)
+      console.log('search', search)
       if (sqlResult.rowCount === 0) {
         return cacheMiss(url, ConstructedObj, search, tableName)
       } else {
@@ -112,7 +112,7 @@ function searchToLatLong(request, response) {
 
   checkDB('search_query', locationName, 'locations', url, Location)
     .then(locationData => {
-
+      console.log('locationData -------------------------------', locationData)
       response.send(locationData);
     })
     .catch(err => {
@@ -136,10 +136,7 @@ function searchForWeather(request, response) {
   
   checkDB('location_id', locationName.id, 'weathers', url, Weather)
   .then(weatherData => {
-    console.log('------------------------', locationName)
-    console.log('weatherData', weatherData);
-    // console.log('weatherData body', weatherData.daily.data)
-
+    console.log('weatherData -------------------------------', weatherData)
     response.send(weatherData);
   })
   .catch(err => {
@@ -206,26 +203,26 @@ function Movie(movieData, search) {
 
 
 
-function searchForFood(request, response) {
+function searchForRestaurants(request, response) {
   const locationName = request.query.data;
   // const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.YELP_API_KEY}`;
-  checkDB('location_id', locationName.id, 'food', url, Food)
-  .then(foodData => {
-    response.send(foodData);
+  checkDB('location_id', locationName.id, 'food', url, Restaurant)
+  .then(restaurantData => {
+    response.send(restaurantData);
   })
   .catch(err => {
-    console.error('searchforfood', err);
+    console.error('searchforrestaurant', err);
     response.status(500).send('Status 500: So sorry i broke');
   })
 }
 
-function Food(foodData, search) {
-  this.title = foodData;
-  this.name = foodData;
-  this.image_url = foodData;
-  this.price = foodData;
-  this.rating = foodData;
-  this.url = foodData;
+function Restaurant(restaurantData, search) {
+  this.title = restaurantData;
+  this.name = restaurantData;
+  this.image_url = restaurantData;
+  this.price = restaurantData;
+  this.rating = restaurantData;
+  this.url = restaurantData;
   this.location_id = search;
 }
 
