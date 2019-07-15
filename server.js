@@ -76,19 +76,22 @@ function cacheMiss(url, ConstructedObj, search, tableName){
     } 
     if (tableName === 'weathers'){
       objects = result.body.daily.data.map(day => new ConstructedObj(day, search))
+      console.log('search', search)
       objects.forEach(obj => values.push(Object.values(obj)))
     }
     // if (tableName === 'events'){
     //   objects = result.body.events.map(event => new ConstructedObj(event, search))
     //   objects.forEach(obj => values.push(Object.values(obj)))
     // }
-    return values.forEach(val => {
+    values.forEach(val => {
       return client.query(SQL_INSERTS[tableName], val)
-        .then(sqlResult => {
-          console.log('sqlResult.rows----------------------', sqlResult.rows)
-          return sqlResult.rows;
-        })
+      .then(sqlResult => {
+        console.log('sqlResult.rows----------------------', sqlResult.rows)
+        return sqlResult.rows;
       })
+    })
+    // console.log('objects', objects)
+    return objects;
   })
 }
 
@@ -96,7 +99,6 @@ function checkDB(searchName, search, tableName, url, ConstructedObj){
   return client.query(`SELECT * FROM ${tableName} WHERE ${searchName}=$1`, [search])
     .then(sqlResult => {
       console.log('tablename', tableName)
-      console.log('search', search)
       if (sqlResult.rowCount === 0) {
         return cacheMiss(url, ConstructedObj, search, tableName)
       } else {
@@ -133,7 +135,7 @@ function Location(query, result) {
 function searchForWeather(request, response) {
   const locationName = request.query.data;
   const url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${locationName.latitude},${locationName.longitude}`;
-  
+
   checkDB('location_id', locationName.id, 'weathers', url, Weather)
   .then(weatherData => {
     console.log('weatherData -------------------------------', weatherData)
@@ -177,54 +179,54 @@ function Event(eventData, search) {
 }
 
 
-function searchForMovies(request, response) {
-  const locationName = request.query.data;
-  const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}`;
-  checkDB('location_id', locationName.id, 'movies', url, Movie)
-  .then(movieData => {
-    response.send(movieData);
-  })
-  .catch(err => {
-    console.error('searchformovies', err);
-    response.status(500).send('Status 500: So sorry i broke');
-  })
-}
+// function searchForMovies(request, response) {
+//   const locationName = request.query.data;
+//   const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}`;
+//   checkDB('location_id', locationName.id, 'movies', url, Movie)
+//   .then(movieData => {
+//     response.send(movieData);
+//   })
+//   .catch(err => {
+//     console.error('searchformovies', err);
+//     response.status(500).send('Status 500: So sorry i broke');
+//   })
+// }
 
-function Movie(movieData, search) {
-  this.title = movieData;
-  this.overview = movieData;
-  this.average_votes = movieData;
-  this.total_votes = movieData;
-  this.image_url = movieData;
-  this.popularity = movieData;
-  this.released_on = movieData;
-  this.location_id = search;
-}
+// function Movie(movieData, search) {
+//   this.title = movieData;
+//   this.overview = movieData;
+//   this.average_votes = movieData;
+//   this.total_votes = movieData;
+//   this.image_url = movieData;
+//   this.popularity = movieData;
+//   this.released_on = movieData;
+//   this.location_id = search;
+// }
 
 
 
-function searchForRestaurants(request, response) {
-  const locationName = request.query.data;
-  // const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.YELP_API_KEY}`;
-  checkDB('location_id', locationName.id, 'food', url, Restaurant)
-  .then(restaurantData => {
-    response.send(restaurantData);
-  })
-  .catch(err => {
-    console.error('searchforrestaurant', err);
-    response.status(500).send('Status 500: So sorry i broke');
-  })
-}
+// function searchForRestaurants(request, response) {
+//   const locationName = request.query.data;
+//   // const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.YELP_API_KEY}`;
+//   checkDB('location_id', locationName.id, 'food', url, Restaurant)
+//   .then(restaurantData => {
+//     response.send(restaurantData);
+//   })
+//   .catch(err => {
+//     console.error('searchforrestaurant', err);
+//     response.status(500).send('Status 500: So sorry i broke');
+//   })
+// }
 
-function Restaurant(restaurantData, search) {
-  this.title = restaurantData;
-  this.name = restaurantData;
-  this.image_url = restaurantData;
-  this.price = restaurantData;
-  this.rating = restaurantData;
-  this.url = restaurantData;
-  this.location_id = search;
-}
+// function Restaurant(restaurantData, search) {
+//   this.title = restaurantData;
+//   this.name = restaurantData;
+//   this.image_url = restaurantData;
+//   this.price = restaurantData;
+//   this.rating = restaurantData;
+//   this.url = restaurantData;
+//   this.location_id = search;
+// }
 
 
 // Make sure the server is listening for requests
