@@ -110,11 +110,15 @@ Weather.prototype = {
 };
 
 function Event(e) {
+  this.tableName = 'events';
   this.link = e.url;
   this.name = e.name.text;
   this.event_date = new Date(e.start.utc).toDateString();
   this.summary = e.summary;
 }
+
+Event.tableName = 'events';
+Event.lookup = lookup;
 
 Event.prototype = {
   save: function (location_id) {
@@ -125,8 +129,6 @@ Event.prototype = {
   }
 };
 
-Event.tableName = 'events';
-Event.lookup = lookup;
 
 function getLocation(request, response) {
   Location.lookupLocation({
@@ -198,7 +200,7 @@ function getEvents(request, response) {
         .then(result => {
           const eventArray = result.body.events.map(e => {
             const eventObj = new Event(e);
-            eventObj.save(request.query.data.id);
+            eventObj.save(request.query.data.id); 
             return eventObj;
           });
           response.send(eventArray);
