@@ -67,7 +67,6 @@ function Location(query, res) {
 Location.lookupLocation = (location) => {
   const SQL = 'SELECT * FROM locations WHERE search_query=$1;';
   const values = [location.query];
-
   return client.query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
@@ -128,8 +127,6 @@ Event.prototype = {
 
 Event.tableName = 'events';
 Event.lookup = lookup;
-
-
 
 function getLocation(request, response) {
   Location.lookupLocation({
